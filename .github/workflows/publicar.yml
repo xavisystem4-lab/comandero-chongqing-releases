@@ -1,0 +1,26 @@
+name: Publicar versión
+on:
+  push:
+    branches: [main]
+    paths: ['apk/**']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Crear la versión con la APK más reciente
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          APK=$(ls apk/ComanderoChongqing-*.apk | sort -V | tail -1)
+          VER=$(basename "$APK" .apk | sed 's/ComanderoChongqing-//')
+          NOTAS="apk/notas-$VER.md"; [ -f "$NOTAS" ] || NOTAS=/dev/null
+          cp "$APK" ComanderoChongqing.apk
+          if gh release view "v$VER" >/dev/null 2>&1; then
+            gh release upload "v$VER" "$APK" ComanderoChongqing.apk --clobber
+          else
+            gh release create "v$VER" "$APK" ComanderoChongqing.apk --title "Comandero Chongqing $VER" --notes-file "$NOTAS" --latest
+          fi
